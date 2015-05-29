@@ -19,9 +19,18 @@
 #include <asm/types.h>          /* for videodev2.h */
 #include <linux/videodev2.h>
 
+#include <ros/ros.h>
+
 // Function prototypes for video control and info output
-void errno_exit(const char *s);
-int xioctl(int fd, int request, void *arg);
+static void errno_exit(const char *s);
+static int xioctl(int fd, int request, void *arg);
+static volatile int g_stopping = 0;
+static void sigHandler(int type)
+{
+    g_stopping = 1;
+    ROS_INFO("stopping\n");
+
+}
 
 // Define class SensorayCam
 class SensorayCam

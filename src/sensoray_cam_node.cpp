@@ -57,7 +57,7 @@ public:
         nh.param("io_method", io_method_name, std::string("mmap"));
         nh.param("image_width", image_width, 640);
         nh.param("image_height", image_height, 480);
-        nh.param("framerate", framerate, 20);
+        nh.param("framerate", framerate, 10);
 
         // load the camera info
         nh.param("camera_frame_id1", img1.header.frame_id, std::string("stereo_left"));
@@ -122,16 +122,16 @@ public:
     bool run()
     {
       ros::Rate loop_rate(this->framerate);
-      scam1.grab_image();
-//      while (nh.ok())
-//      {
-//        //read_and_publish_image();
-//        //scam1.grab_image();
+      //scam1.grab_image();
+      while (nh.ok())
+      {
+        //read_and_publish_image();
+        scam1.grab_image();
 
-//        ROS_INFO("run function being called here.");
-//        ros::spinOnce();
-//        loop_rate.sleep();
-//      }
+        // ROS_INFO("run function being called here.");
+        //ros::spinOnce();
+        //loop_rate.sleep();
+      }
       return true;
     }
 
@@ -146,6 +146,7 @@ public:
 
 int main(int argc, char **argv)
 {
+    signal(SIGINT, &sigHandler);
     ros::init(argc, argv, "sensoray_cam");
     ros::NodeHandle n("~");
     SensorayCamNode a(n);

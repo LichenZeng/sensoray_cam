@@ -1,29 +1,27 @@
 //#define __STDC_CONSTANT_MACROS
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <getopt.h>             /* getopt_long() */
-#include <fcntl.h>              /* low-level i/o */
-#include <unistd.h>
-#include <errno.h>
-#include <malloc.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
-#include <signal.h>
-#include <asm/types.h>          /* for videodev2.h */
-#include <linux/videodev2.h>
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <assert.h>
+//#include <getopt.h>             /* getopt_long() */
+//#include <fcntl.h>              /* low-level i/o */
+//#include <unistd.h>
+//#include <errno.h>
+//#include <malloc.h>
+//#include <sys/stat.h>
+//#include <sys/types.h>
+//#include <sys/time.h>
+//#include <sys/mman.h>
+//#include <sys/ioctl.h>
+//#include <signal.h>
+//#include <asm/types.h>          /* for videodev2.h */
+//#include <linux/videodev2.h>
 
-#include <ros/ros.h>
 #include "sensoray_cam/sensoray_cam.h"
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
-static volatile int g_stopping = 0;
 
 void errno_exit(const char *s)
 {
@@ -41,7 +39,7 @@ int xioctl(int fd, int request, void *arg)
     return r;
 }
 
-//void SensorayCam::sigHandler(int type)
+//void sigHandler(int type)
 //{
 //    g_stopping = 1;
 //    printf("stopping\n");
@@ -117,17 +115,17 @@ case IO_METHOD_MMAP:
     }
 
             assert (buf.index < n_buffers);
-    {
-        FILE *f1;
-        static int cnt = 0;
-        char name[100];
-        sprintf(name, "test%d.jpg", cnt);
-        cnt++;
-        f1 = fopen(name, "wb+");
-        printf("wrote %d.  press Ctrl-C to stop\n", buf.bytesused);
-        fwrite(buffers[buf.index].start, 1, buf.bytesused,f1);//buffers[buf.index].length, f1);
-        fclose(f1);
-    }
+//    {
+//        FILE *f1;
+//        static int cnt = 0;
+//        char name[100];
+//        sprintf(name, "test%d.jpg", cnt);
+//        cnt++;
+//        f1 = fopen(name, "wb+");
+//        printf("wrote %d.  press Ctrl-C to stop\n", buf.bytesused);
+//        fwrite(buffers[buf.index].start, 1, buf.bytesused,f1);//buffers[buf.index].length, f1);
+//        fclose(f1);
+//    }
 
         process_image (buffers[buf.index].start);
 
@@ -177,43 +175,45 @@ return 1;
 
 bool SensorayCam::grab_image(void)
 {
-    unsigned int count;
+//    unsigned int count = 50;
+//    while (count-- > 0 && !g_stopping) {
+//    int cnt = 0;
+//    for (;;) {
+//            ROS_INFO("grab_frame:forloop:%d",cnt++);
+            fd_set fds;
+            struct timeval tv;
+            int r;
 
-        count = 1;
+            FD_ZERO (&fds);
+            FD_SET (fd, &fds);
 
-        while (count-- > 0 && !g_stopping) {
-                for (;;) {
-                        fd_set fds;
-                        struct timeval tv;
-                        int r;
+            /* Timeout. */
+            tv.tv_sec = 5;
+            tv.tv_usec = 0;
 
-                        FD_ZERO (&fds);
-                        FD_SET (fd, &fds);
+            r = select (fd + 1, &fds, NULL, NULL, &tv);
 
-                        /* Timeout. */
-                        tv.tv_sec = 5;
-                        tv.tv_usec = 0;
+            if (-1 == r) {
+                    if (EINTR == errno)
+//                            continue;
+                        return 0;
 
-                        r = select (fd + 1, &fds, NULL, NULL, &tv);
+                    errno_exit ("select");
+            }
 
-                        if (-1 == r) {
-                                if (EINTR == errno)
-                                        continue;
-
-                                errno_exit ("select");
-                        }
-
-                        if (0 == r) {
-                                fprintf (stderr, "select timeout\n");
-                                exit (EXIT_FAILURE);
-                        }
+            if (0 == r) {
+                    fprintf (stderr, "select timeout\n");
+                    exit (EXIT_FAILURE);
+            }
 
             if (read_frame ())
-                            break;
+//                            break;
+                return 1;
+
 
             /* EAGAIN - continue select loop. */
-                }
-        }
+//                }
+//        }
 }
 
 void SensorayCam::stop_capturing(void)
