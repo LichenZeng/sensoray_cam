@@ -16,9 +16,8 @@
 #include <sensor_msgs/CompressedImage.h>
 #include <image_transport/image_transport.h>
 #include <camera_info_manager/camera_info_manager.h>
-#include <sstream>
 
-//#include <stdio.h>
+#include <sstream>
 
 class SensorayCamNode
 {
@@ -64,25 +63,19 @@ public:
         nh.param("camera_frame_id2", img2.header.frame_id, std::string("stereo_right"));
         nh.param("camera_name1", camera_name1, std::string("stereo_left"));
         nh.param("camera_name2", camera_name2, std::string("stereo_right"));
-        //nh.param("camera_info_url1", camera_info_url1, std::string("file://${ROS_HOME}/camera_info/calib_left.yaml"));
-        //nh.param("camera_info_url2", camera_info_url2, std::string("file://${ROS_HOME}/camera_info/calib_right.yaml"));
-        //cinfo1.reset(new camera_info_manager::CameraInfoManager(nh, camera_name1, camera_info_url1));
-        //cinfo2.reset(new camera_info_manager::CameraInfoManager(nh, camera_name2, camera_info_url2));
+        nh.param("camera_info_url1", camera_info_url1, std::string("file://${ROS_HOME}/camera_info/calib_left.yaml"));
+        nh.param("camera_info_url2", camera_info_url2, std::string("file://${ROS_HOME}/camera_info/calib_right.yaml"));
+        cinfo1.reset(new camera_info_manager::CameraInfoManager(nh, camera_name1, camera_info_url1));
+        cinfo2.reset(new camera_info_manager::CameraInfoManager(nh, camera_name2, camera_info_url2));
 
-
-        // pass the device name to sensoray camera objects
-//        std::strcpy(scam1.dev_name, dev_name1.c_str());
-//        std::strcpy(scam2.dev_name, dev_name2.c_str());
-        scam1.dev_name = (char*)"/dev/video0";
-        scam2.dev_name = (char*)"/dev/video1";
+        // pass the device name to sensoray_cam objects
+        std::strcpy(scam1.dev_name, dev_name1.c_str());
+        std::strcpy(scam2.dev_name, dev_name2.c_str());
 
         // start the devices
         scam1.open_device();
-        ROS_INFO("device opened");
         scam1.init_device();
-        ROS_INFO("device init");
         scam1.start_capturing();
-        ROS_INFO("device start capture");
 
         //scam2.open_device();
         //scam2.init_device();
@@ -102,56 +95,47 @@ public:
         //scam2.close_device();
     }
 
+    // read image and publish
     void read_and_publish_image()
     {
         // read the images
-        if(scam1.grab_image())
+        if(!scam1.grab_image())
         {
-            ROS_INFO("cam1 grabbed one image.");
-            // TODO: publish image message
+            ROS_WARN("Device '%s' loses frame.", scam1.dev_name);
         }
-        /*if(scam2.grab_image())
-        {
-            ROS_INFO("Image 2 grabbed.");
-            // TODO: publish image message
-        }*/
+//        if(!scam2.grab_image())
+//        {
+//            ROS_WARN("Device '%s' loses frame.", scam2.dev_name);
+//        }
 
 
     }
 
     bool run()
     {
-      ros::Rate loop_rate(this->framerate);
-      //scam1.grab_image();
-      while (nh.ok())
-      {
-        //read_and_publish_image();
-        scam1.grab_image();
+//        ros::Rate loop_rate(this->framerate);
+        while (nh.ok())
+        {
+            read_and_publish_image();
+//            ros::spinOnce();
+//            loop_rate.sleep();
+        }
+//        ros::Timer timer = nh.createTimer(ros::Duration(1.0/framerate), read_and_publish_image);
 
-        // ROS_INFO("run function being called here.");
-        //ros::spinOnce();
-        //loop_rate.sleep();
-      }
-      return true;
+        return true;
     }
-
-    /*bool run()
-    {
-        scam1.grab_image();
-        //scam2.mainloop();
-        ROS_INFO("running function being called here.");
-    }*/
 
 };
 
 int main(int argc, char **argv)
 {
-    signal(SIGINT, &sigHandler);
     ros::init(argc, argv, "sensoray_cam");
     ros::NodeHandle n("~");
     SensorayCamNode a(n);
+
     a.run();
-    return EXIT_SUCCESS;
+
+    return 1;
 
 }
 

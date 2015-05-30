@@ -21,29 +21,22 @@
 
 #include <ros/ros.h>
 
-// Function prototypes for video control and info output
+// warpper function declaration
 static void errno_exit(const char *s);
-static int xioctl(int fd, int request, void *arg);
-static volatile int g_stopping = 0;
-static void sigHandler(int type)
-{
-    g_stopping = 1;
-    ROS_INFO("stopping\n");
+static int  xioctl(int fd, int request, void *arg);
 
-}
-
-// Define class SensorayCam
+// define class SensorayCam
 class SensorayCam
 {
 public:
-    // Define image I/O methods
+    // image I/O methods
     typedef enum {
         IO_METHOD_READ,
         IO_METHOD_MMAP,
         IO_METHOD_USERPTR,
     } io_method;
 
-    // Define image buffer struct
+    // image buffer struct
     struct buffer {
         void * start;
         size_t length;
@@ -52,18 +45,17 @@ public:
     SensorayCam();
     ~SensorayCam();
 
-    char*           dev_name;
+    // member variables
+    char            dev_name[100];
     io_method       io;
     buffer*         buffers = NULL;
     int             fd;
     unsigned int    n_buffers;
-//    volatile int    g_stopping;
     int             G_quality;
-
     int             bPAL;
     int             bSize; // 4 CIFS(other settings 1 or 2)
 
-//    void sigHandler(int type);
+    // member functions
     int  read_frame(void);
     void process_image(const void *p);
     bool grab_image(void);
@@ -73,33 +65,12 @@ public:
     void init_device (void);
     void close_device (void);
     void open_device (void);
-//    void usage (FILE * fp,int argc,char ** argv);
-//    int EnumVideo(int display);
-//    int Check2255(char *devname);
-//    void test_video_status(void);
 
 private:
     void init_read(unsigned int buffer_size);
     void init_mmap(void);
     void init_userp	(unsigned int buffer_size);
 
-
-    //const char short_options [] = "d:ehmruisf";
-
-    /*const struct option long_options [] = {
-        { "device",     required_argument,      NULL,           'd' },
-        { "enumerate",  no_argument,            NULL,           'e' },
-        { "help",       no_argument,            NULL,           'h' },
-        { "mmap",       no_argument,            NULL,           'm' },
-        { "read",       no_argument,            NULL,           'r' },
-        { "userp",      no_argument,            NULL,           'u' },
-        { "interp",     no_argument,            NULL,           'i' },
-        { "serial",     no_argument,            NULL,           's' },
-        { "firmware",     no_argument,            NULL,         'f' },
-        { 0, 0, 0, 0 }
-    };*/
-
-    //const char *cardname = "s2255";
 };
 
 #endif
