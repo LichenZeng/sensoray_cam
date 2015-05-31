@@ -12,15 +12,19 @@ void errno_exit(const char *s)
 int xioctl(int fd, int request, void *arg)
 {
     int r;
+    int count = 0;
     do {
         r = ioctl (fd, request, arg);
+        ROS_INFO("xioctl called count = %d",count++);
     }
     while (-1 == r && EINTR == errno);
     return r;
 }
 
 
-SensorayCam::SensorayCam(){
+SensorayCam::SensorayCam(std::string d_name){
+    ROS_INFO("SensorayCam constructor called");
+
     io          = IO_METHOD_MMAP;
     fd          = -1;
     n_buffers   = 0;
@@ -28,18 +32,36 @@ SensorayCam::SensorayCam(){
 
     bPAL        = 0;
     bSize       = 4; // 4 CIFS(other settings 1 or 2)
+
+    std::strcpy(dev_name, d_name.c_str());
+//    dev_name[0] = *d_name;
+    open_device();
+    ROS_INFO("open device");
+    init_device();
+    ROS_INFO("init device");
+    start_capturing();
+    ROS_INFO("start capturing");
 }
 
-SensorayCam::~SensorayCam(){}
+SensorayCam::~SensorayCam(){
+    ROS_INFO("SensorayCam destructor called");
+    stop_capturing();
+    ROS_INFO("stop capturing");
+    uninit_device();
+    ROS_INFO("uninit device");
+    close_device();
+    ROS_INFO("close device");
+}
 
 void SensorayCam::process_image(const void *p)
 {
-    fputc ('.', stdout);
-    fflush (stdout);
+//    fputc ('.', stdout);
+//    fflush (stdout);
 }
 
 int SensorayCam::read_frame (void)
 {
+    ROS_INFO("calling read_frame");
     struct v4l2_buffer buf;
     unsigned int i;
 
@@ -66,7 +88,7 @@ int SensorayCam::read_frame (void)
         CLEAR (buf);
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         buf.memory = V4L2_MEMORY_MMAP;
-
+        ROS_INFO("entered IO_METHOD_MMAP");
         if (-1 == xioctl (fd, VIDIOC_DQBUF, &buf)) {
             switch (errno) {
                 case EAGAIN:
@@ -85,17 +107,18 @@ int SensorayCam::read_frame (void)
         assert (buf.index < n_buffers);
 
         // stacking images
-//        {
-//            FILE *f1;
-//            static int cnt = 0;
-//            char name[100];
-//            sprintf(name, "test%d.jpg", cnt);
-//            cnt++;
-//            f1 = fopen(name, "wb+");
+        {
+            ROS_INFO("stacking jpeg images");
+            FILE *f1;
+            static int cnt = 0;
+            char name[100];
+            sprintf(name, "test%d.jpg", cnt);
+            cnt++;
+            f1 = fopen(name, "wb+");
 //            printf("wrote %d.  press Ctrl-C to stop\n", buf.bytesused);
-//            fwrite(buffers[buf.index].start, 1, buf.bytesused,f1);//buffers[buf.index].length, f1);
-//            fclose(f1);
-//        }
+            fwrite(buffers[buf.index].start, 1, buf.bytesused,f1);//buffers[buf.index].length, f1);
+            fclose(f1);
+        }
 
         process_image (buffers[buf.index].start);
         if (-1 == xioctl (fd, VIDIOC_QBUF, &buf))
@@ -140,6 +163,7 @@ int SensorayCam::read_frame (void)
 
 bool SensorayCam::grab_image(void)
 {
+    ROS_INFO("grab_image called");
     fd_set fds;
     struct timeval tv;
     int r;
@@ -151,13 +175,14 @@ bool SensorayCam::grab_image(void)
     tv.tv_sec = 5;
     tv.tv_usec = 0;
 
+    // wait until the driver has captured data
     r = select (fd + 1, &fds, NULL, NULL, &tv);
+    ROS_INFO("select() returned: r = %d",r);
 
     if (-1 == r) {
-            if (EINTR == errno)
-                return 0;
-
-            errno_exit ("select");
+        if (EINTR == errno)
+            return 0;
+        errno_exit ("select");
     }
 
     if (0 == r) {
@@ -165,9 +190,13 @@ bool SensorayCam::grab_image(void)
             exit (EXIT_FAILURE);
     }
 
-    if (read_frame ())
-        return 1;
-
+    ROS_INFO("call read_frame");
+    if (read_frame ()){
+        ROS_INFO("read_frame called");
+        return 1;}
+    else{
+        ROS_WARN("read_frame failed");
+    }
     /* EAGAIN - continue select loop. */
 }
 
@@ -181,9 +210,10 @@ void SensorayCam::stop_capturing(void)
         break;
 
     case IO_METHOD_MMAP:
+        break;
     case IO_METHOD_USERPTR:
         type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        printf("sending VIDIOC_STREAMOFF\n");
+        ROS_INFO("sending VIDIOC_STREAMOFF\n");
         if (-1 == xioctl (fd, VIDIOC_STREAMOFF, &type))
             errno_exit ("VIDIOC_STREAMOFF");
 
@@ -265,6 +295,7 @@ void SensorayCam::uninit_device (void)
     }
 
     free (buffers);
+    ROS_INFO("Uninitializing device");
 }
 
 void SensorayCam::init_read(unsigned int buffer_size)
@@ -537,6 +568,7 @@ void SensorayCam::close_device(void)
         errno_exit ("close");
 
     fd = -1;
+    ROS_INFO("Closing video devices.");
 }
 
 void SensorayCam::open_device(void)

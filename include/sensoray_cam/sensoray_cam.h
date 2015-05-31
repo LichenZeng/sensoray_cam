@@ -42,7 +42,7 @@ public:
         size_t length;
     };
 
-    SensorayCam();
+    SensorayCam(std::string device_name);
     ~SensorayCam();
 
     // member variables
