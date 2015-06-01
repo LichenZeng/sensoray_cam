@@ -39,7 +39,6 @@ SensorayCam::SensorayCam(std::string d_name){
     bSize       = 4; // 4 CIFS(other settings 1 or 2)
 
     std::strcpy(dev_name, d_name.c_str());
-    //    dev_name[0] = *d_name;
     open_device();
     ROS_INFO("open device");
     init_device();
@@ -63,9 +62,9 @@ void SensorayCam::process_image(void *p)
     //    fputc ('.', stdout);
     //    fflush (stdout);
     // convert buffer to opencv datatupe
-    cv::Mat buf = cv::Mat(480, 640, CV_8UC3, p);
+//    cv::Mat buf = cv::Mat(480, 640, CV_8UC3, p);
     //    cv::Mat image, buf;
-    image = cv::imdecode(buf, 1);
+//    image = cv::imdecode(buf, 1);
 }
 
 int SensorayCam::read_frame (void)

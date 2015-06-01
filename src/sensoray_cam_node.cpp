@@ -34,17 +34,12 @@ int main(int argc, char **argv)
     boost::shared_ptr<camera_info_manager::CameraInfoManager> cinfo1, cinfo2;
 
     // shared image message
-    sensor_msgs::CompressedImage img1,img2;
+    sensor_msgs::Image img1,img2;
     image_transport::CameraPublisher img_pub1,img_pub2;
-
-
     image_transport::ImageTransport it(nh);
-    ros::Publisher crapImgPub, crapImgPub2;
 
-    crapImgPub = nh.advertise<sensor_msgs::CompressedImage>("MyImg", 10);
-    crapImgPub2 = nh.advertise<sensor_msgs::Image>("MyImg_raw", 10);
-    img_pub1 = it.advertiseCamera("/sensoray_cam_stereo/left/image_raw/compressed",1);
-    img_pub2 = it.advertiseCamera("/sensoray_cam_stereo/right/image_raw/compressed",1);
+    img_pub1 = it.advertiseCamera("/sensoray_cam_stereo/left/image_raw",1);
+    img_pub2 = it.advertiseCamera("/sensoray_cam_stereo/right/image_raw",1);
 
     // grab the parameters
     nh.param("video_device1", dev_name1, std::string("/dev/video0"));
@@ -74,22 +69,32 @@ int main(int argc, char **argv)
     // the main loop
     int count = 0;
     ros::Publisher chatter_pub = nh.advertise<std_msgs::String>("chatter", 1000);
-    while(ros::ok() && count < 10)
+    while(ros::ok())
     {
-        // read images
+        // read image
         if(!cam1.grab_image()){
             ROS_WARN("Device '%s' loses frame.", cam1.dev_name);
         }
 
-        //publish image
+        //convert image
         cv_bridge::CvImage cv_image;
-        sensor_msgs::Image ros_image;
-        cv::Mat imgbuf(cv::Size(480, 640), CV_8UC3, cam1.myImgPtr);
+        cv::Mat imgbuf(cv::Size(image_width, image_height), CV_8UC3, cam1.myImgPtr);
         cv_image.image = cv::imdecode(imgbuf,1);
         cv_image.encoding = "bgr8";
-        cv_image.toImageMsg(ros_image);
-        crapImgPub2.publish(ros_image);
+        cv_image.toImageMsg(img1);
 
-        ROS_INFO("count = %d", count++);
+        // grab the camera info
+        sensor_msgs::CameraInfoPtr ci1(new sensor_msgs::CameraInfo(cinfo1->getCameraInfo()));
+        ci1->header.frame_id = img1.header.frame_id;
+        ci1->header.stamp = img1.header.stamp;
+
+        sensor_msgs::CameraInfoPtr ci2(new sensor_msgs::CameraInfo(cinfo2->getCameraInfo()));
+        ci2->header.frame_id = img2.header.frame_id;
+        ci2->header.stamp = img2.header.stamp;  //make the camera info have the same header stamp
+
+        // publish image
+        img_pub1.publish(img1, *ci1);
+
+        ROS_INFO("loop iteration: %d", count++);
     }
 }

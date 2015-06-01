@@ -55,7 +55,7 @@ public:
     char            dev_name[100];
     io_method       io;
     buffer*         buffers = NULL;
-    cv::Mat         image;
+//    cv::Mat         image;
     int             fd;
     unsigned int    n_buffers;
     int             G_quality;
