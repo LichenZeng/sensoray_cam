@@ -1,6 +1,11 @@
 
 #include "sensoray_cam/sensoray_cam.h"
 
+// opencv
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
 void errno_exit(const char *s)
@@ -15,7 +20,7 @@ int xioctl(int fd, int request, void *arg)
     int count = 0;
     do {
         r = ioctl (fd, request, arg);
-        ROS_INFO("xioctl called count = %d",count++);
+        //        ROS_INFO("xioctl called count = %d",count++);
     }
     while (-1 == r && EINTR == errno);
     return r;
@@ -34,7 +39,7 @@ SensorayCam::SensorayCam(std::string d_name){
     bSize       = 4; // 4 CIFS(other settings 1 or 2)
 
     std::strcpy(dev_name, d_name.c_str());
-//    dev_name[0] = *d_name;
+    //    dev_name[0] = *d_name;
     open_device();
     ROS_INFO("open device");
     init_device();
@@ -53,10 +58,14 @@ SensorayCam::~SensorayCam(){
     ROS_INFO("close device");
 }
 
-void SensorayCam::process_image(const void *p)
+void SensorayCam::process_image(void *p)
 {
-//    fputc ('.', stdout);
-//    fflush (stdout);
+    //    fputc ('.', stdout);
+    //    fflush (stdout);
+    // convert buffer to opencv datatupe
+    cv::Mat buf = cv::Mat(480, 640, CV_8UC3, p);
+    //    cv::Mat image, buf;
+    image = cv::imdecode(buf, 1);
 }
 
 int SensorayCam::read_frame (void)
@@ -70,7 +79,7 @@ int SensorayCam::read_frame (void)
         if (-1 == read (fd, buffers[0].start, buffers[0].length)) {
             switch (errno) {
             case EAGAIN:
-                    return 0;
+                return 0;
 
             case EIO:
                 /* Could ignore EIO, see spec. */
@@ -91,34 +100,37 @@ int SensorayCam::read_frame (void)
         ROS_INFO("entered IO_METHOD_MMAP");
         if (-1 == xioctl (fd, VIDIOC_DQBUF, &buf)) {
             switch (errno) {
-                case EAGAIN:
-                        return 0;
+            case EAGAIN:
+                return 0;
 
-                case EIO:
-                    /* Could ignore EIO, see spec. */
+            case EIO:
+                /* Could ignore EIO, see spec. */
 
-                    /* fall through */
+                /* fall through */
 
-                default:
-                    errno_exit ("VIDIOC_DQBUF");
+            default:
+                errno_exit ("VIDIOC_DQBUF");
             }
         }
 
         assert (buf.index < n_buffers);
 
         // stacking images
-        {
-            ROS_INFO("stacking jpeg images");
-            FILE *f1;
-            static int cnt = 0;
-            char name[100];
-            sprintf(name, "test%d.jpg", cnt);
-            cnt++;
-            f1 = fopen(name, "wb+");
-//            printf("wrote %d.  press Ctrl-C to stop\n", buf.bytesused);
-            fwrite(buffers[buf.index].start, 1, buf.bytesused,f1);//buffers[buf.index].length, f1);
-            fclose(f1);
-        }
+//    {
+//        ROS_INFO("stacking jpeg images");
+//        FILE *f1;
+//        static int cnt = 0;
+//        char name[100];
+//        sprintf(name, "test%d.jpg", cnt);
+//        cnt++;
+//        f1 = fopen(name, "wb+");
+//        //            printf("wrote %d.  press Ctrl-C to stop\n", buf.bytesused);
+//        fwrite(buffers[buf.index].start, 1, buf.bytesused,f1);//buffers[buf.index].length, f1);
+//        ROS_INFO("buf.index = %d",buf.index);
+//        fclose(f1);
+//    }
+        myImgPtr = buffers[buf.index].start;
+        myImgSize = buf.bytesused;
 
         process_image (buffers[buf.index].start);
         if (-1 == xioctl (fd, VIDIOC_QBUF, &buf))
@@ -148,7 +160,7 @@ int SensorayCam::read_frame (void)
 
         for (i = 0; i < n_buffers; ++i)
             if (buf.m.userptr == (unsigned long) buffers[i].start
-                && buf.length == buffers[i].length)
+                    && buf.length == buffers[i].length)
                 break;
 
         assert (i < n_buffers);
@@ -186,8 +198,8 @@ bool SensorayCam::grab_image(void)
     }
 
     if (0 == r) {
-            fprintf (stderr, "select timeout\n");
-            exit (EXIT_FAILURE);
+        fprintf (stderr, "select timeout\n");
+        exit (EXIT_FAILURE);
     }
 
     ROS_INFO("call read_frame");
@@ -240,7 +252,7 @@ void SensorayCam::start_capturing(void)
             buf.index       = i;
 
             if (-1 == xioctl (fd, VIDIOC_QBUF, &buf))
-                        errno_exit ("VIDIOC_QBUF");
+                errno_exit ("VIDIOC_QBUF");
         }
 
         type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -261,7 +273,7 @@ void SensorayCam::start_capturing(void)
             buf.length      = buffers[i].length;
 
             if (-1 == xioctl (fd, VIDIOC_QBUF, &buf))
-                            errno_exit ("VIDIOC_QBUF");
+                errno_exit ("VIDIOC_QBUF");
         }
 
         type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -271,27 +283,27 @@ void SensorayCam::start_capturing(void)
 
         break;
     }
-    }
+}
 
 void SensorayCam::uninit_device (void)
 {
     unsigned int i;
 
     switch (io) {
-        case IO_METHOD_READ:
-            free (buffers[0].start);
-            break;
+    case IO_METHOD_READ:
+        free (buffers[0].start);
+        break;
 
-        case IO_METHOD_MMAP:
-            for (i = 0; i < n_buffers; ++i)
-                if (-1 == munmap (buffers[i].start, buffers[i].length))
-                    errno_exit ("munmap");
-            break;
+    case IO_METHOD_MMAP:
+        for (i = 0; i < n_buffers; ++i)
+            if (-1 == munmap (buffers[i].start, buffers[i].length))
+                errno_exit ("munmap");
+        break;
 
-        case IO_METHOD_USERPTR:
-            for (i = 0; i < n_buffers; ++i)
-                free (buffers[i].start);
-            break;
+    case IO_METHOD_USERPTR:
+        for (i = 0; i < n_buffers; ++i)
+            free (buffers[i].start);
+        break;
     }
 
     free (buffers);
@@ -321,12 +333,12 @@ void SensorayCam::init_mmap(void)
     struct v4l2_requestbuffers req;
     int rc;
     CLEAR (req);
-//    printf("mmap\n");
+    //    printf("mmap\n");
     req.count               = 4;
     req.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     req.memory              = V4L2_MEMORY_MMAP;
     rc = xioctl (fd, VIDIOC_REQBUFS, &req);
-//    printf("mmap rc %d\n", rc);
+    //    printf("mmap rc %d\n", rc);
 
     if (rc == -1) {
         if (EINVAL == errno) {
@@ -360,7 +372,7 @@ void SensorayCam::init_mmap(void)
         buf.index       = n_buffers;
 
         if (-1 == xioctl (fd, VIDIOC_QUERYBUF, &buf))
-                errno_exit ("VIDIOC_QUERYBUF");
+            errno_exit ("VIDIOC_QUERYBUF");
 
         buffers[n_buffers].length = buf.length;
         buffers[n_buffers].start =
@@ -371,7 +383,7 @@ void SensorayCam::init_mmap(void)
                       fd, buf.m.offset);
 
         if (MAP_FAILED == buffers[n_buffers].start)
-                errno_exit ("mmap");
+            errno_exit ("mmap");
     }
 }
 
@@ -428,11 +440,11 @@ void SensorayCam::init_device(void)
 
     if (-1 == xioctl (fd, VIDIOC_QUERYCAP, &cap)) {
         if (EINVAL == errno) {
-                fprintf (stderr, "%s is no V4L2 device\n",
-                         dev_name);
-                exit (EXIT_FAILURE);
+            fprintf (stderr, "%s is no V4L2 device\n",
+                     dev_name);
+            exit (EXIT_FAILURE);
         } else {
-                errno_exit ("VIDIOC_QUERYCAP");
+            errno_exit ("VIDIOC_QUERYCAP");
         }
     }
 
@@ -446,7 +458,7 @@ void SensorayCam::init_device(void)
     case IO_METHOD_READ:
         if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
             fprintf (stderr, "%s does not support read i/o\n",
-                 dev_name);
+                     dev_name);
             exit (EXIT_FAILURE);
         }
 
@@ -456,14 +468,14 @@ void SensorayCam::init_device(void)
     case IO_METHOD_USERPTR:
         if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
             fprintf (stderr, "%s does not support streaming i/o\n",
-                 dev_name);
+                     dev_name);
             exit (EXIT_FAILURE);
         }
 
         break;
     }
 
-        /* Select video input, video standard and tune here. */
+    /* Select video input, video standard and tune here. */
 
     if (bPAL) {
         int type = V4L2_STD_PAL;
@@ -536,7 +548,7 @@ void SensorayCam::init_device(void)
 
 
     /* Note VIDIOC_S_FMT may change width and height. */
-    #if 0
+#if 0
     /* Buggy driver paranoia. */
     min = fmt.fmt.pix.width * 2;
     if (fmt.fmt.pix.bytesperline < min)
@@ -544,7 +556,7 @@ void SensorayCam::init_device(void)
     min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
     if (fmt.fmt.pix.sizeimage < min)
         fmt.fmt.pix.sizeimage = min;
-    #endif
+#endif
 
     switch (io) {
     case IO_METHOD_READ:

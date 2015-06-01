@@ -19,6 +19,12 @@
 #include <asm/types.h>          /* for videodev2.h */
 #include <linux/videodev2.h>
 
+// opencv
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+// ros
 #include <ros/ros.h>
 
 // warpper function declaration
@@ -49,15 +55,18 @@ public:
     char            dev_name[100];
     io_method       io;
     buffer*         buffers = NULL;
+    cv::Mat         image;
     int             fd;
     unsigned int    n_buffers;
     int             G_quality;
     int             bPAL;
     int             bSize; // 4 CIFS(other settings 1 or 2)
+    void* myImgPtr;
+    size_t myImgSize;
 
     // member functions
     int  read_frame(void);
-    void process_image(const void *p);
+    void process_image(void *p);
     bool grab_image(void);
     void stop_capturing (void);
     void start_capturing (void);

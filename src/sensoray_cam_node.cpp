@@ -15,9 +15,12 @@
 // For communication to ROS
 #include <ros/ros.h>
 #include <sensor_msgs/CompressedImage.h>
+#include "std_msgs/String.h"
 #include <image_transport/image_transport.h>
 #include <camera_info_manager/camera_info_manager.h>
 #include <sstream>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
 
 // the main
 int main(int argc, char **argv)
@@ -26,7 +29,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // parameters
-    std::string dev_name1, dev_name2, io_method_name, camera_name1, camera_name2, camera_info_url1,camera_info_url2;
+    std::string dev_name1, dev_name2, io_method_name, camera_name1, camera_name2, camera_info_url1, camera_info_url2;
     int image_width, image_height, framerate;
     boost::shared_ptr<camera_info_manager::CameraInfoManager> cinfo1, cinfo2;
 
@@ -34,9 +37,14 @@ int main(int argc, char **argv)
     sensor_msgs::CompressedImage img1,img2;
     image_transport::CameraPublisher img_pub1,img_pub2;
 
+
     image_transport::ImageTransport it(nh);
-    img_pub1 = it.advertiseCamera("/sensoray_cam_stereo/left/image_raw",1);
-    img_pub2 = it.advertiseCamera("/sensoray_cam_stereo/right/image_raw",1);
+    ros::Publisher crapImgPub, crapImgPub2;
+
+    crapImgPub = nh.advertise<sensor_msgs::CompressedImage>("MyImg", 10);
+    crapImgPub2 = nh.advertise<sensor_msgs::Image>("MyImg_raw", 10);
+    img_pub1 = it.advertiseCamera("/sensoray_cam_stereo/left/image_raw/compressed",1);
+    img_pub2 = it.advertiseCamera("/sensoray_cam_stereo/right/image_raw/compressed",1);
 
     // grab the parameters
     nh.param("video_device1", dev_name1, std::string("/dev/video0"));
@@ -64,13 +72,24 @@ int main(int argc, char **argv)
 //    SensorayCam cam2(dev_name2);
 
     // the main loop
-    while(nh.ok())
+    int count = 0;
+    ros::Publisher chatter_pub = nh.advertise<std_msgs::String>("chatter", 1000);
+    while(ros::ok() && count < 10)
     {
         // read images
         if(!cam1.grab_image()){
             ROS_WARN("Device '%s' loses frame.", cam1.dev_name);
         }
 
-        ROS_INFO("read a message.");
+        //publish image
+        cv_bridge::CvImage cv_image;
+        sensor_msgs::Image ros_image;
+        cv::Mat imgbuf(cv::Size(480, 640), CV_8UC3, cam1.myImgPtr);
+        cv_image.image = cv::imdecode(imgbuf,1);
+        cv_image.encoding = "bgr8";
+        cv_image.toImageMsg(ros_image);
+        crapImgPub2.publish(ros_image);
+
+        ROS_INFO("count = %d", count++);
     }
 }
