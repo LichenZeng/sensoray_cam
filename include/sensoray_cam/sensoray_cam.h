@@ -55,14 +55,13 @@ public:
     char            dev_name[100];
     io_method       io;
     buffer*         buffers = NULL;
-//    cv::Mat         image;
     int             fd;
     unsigned int    n_buffers;
     int             G_quality;
     int             bPAL;
     int             bSize; // 4 CIFS(other settings 1 or 2)
-    void* myImgPtr;
-    size_t myImgSize;
+    void*           myImgPtr;
+    size_t          myImgSize;
 
     // member functions
     int  read_frame(void);

@@ -22,6 +22,13 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
+sig_atomic_t stopFlag = 0;
+
+void handler( int )
+{
+    stopFlag = 1;
+}
+
 // the main
 int main(int argc, char **argv)
 {
@@ -61,6 +68,11 @@ int main(int argc, char **argv)
     cinfo1.reset(new camera_info_manager::CameraInfoManager(nh, camera_name1, camera_info_url1));
     cinfo2.reset(new camera_info_manager::CameraInfoManager(nh, camera_name2, camera_info_url2));
 
+    // check camera info is published
+    if(camera_info_url1.size() == 0 || camera_info_url2.size() == 0){
+        ROS_ERROR("No camera_info is published, check the topic list");
+    }
+
     // define sensoray camera capture object
     /*for debug, we only define one object for now*/
     SensorayCam cam1(dev_name1);
@@ -68,33 +80,50 @@ int main(int argc, char **argv)
 
     // the main loop
     int count = 0;
-    ros::Publisher chatter_pub = nh.advertise<std_msgs::String>("chatter", 1000);
-    while(ros::ok())
+    while(ros::ok() && nh.ok() && stopFlag == 0)// && count < 10)
     {
+        ROS_INFO("ros is ok.");
         // read image
         if(!cam1.grab_image()){
-            ROS_WARN("Device '%s' loses frame.", cam1.dev_name);
+            ROS_WARN("%s: loses frame.", cam1.dev_name);
+            stopFlag = 1;
+            continue;
         }
+        ROS_INFO("grabed a image");
+//        if(!cam2.grab_image()){
+//            ROS_WARN("%s: loses frame.", cam2.dev_name);
+//            continue;
+//        }
 
         //convert image
-        cv_bridge::CvImage cv_image;
-        cv::Mat imgbuf(cv::Size(image_width, image_height), CV_8UC3, cam1.myImgPtr);
-        cv_image.image = cv::imdecode(imgbuf,1);
-        cv_image.encoding = "bgr8";
-        cv_image.toImageMsg(img1);
+        cv_bridge::CvImage cv_image1;
+        cv::Mat imgbuf1(cv::Size(image_width, image_height), CV_8UC3, cam1.myImgPtr);
+        cv_image1.image = cv::imdecode(imgbuf1,1);
+        cv_image1.encoding = "bgr8";
+        cv_image1.toImageMsg(img1);
+
+//        cv_bridge::CvImage cv_image2;
+//        cv::Mat imgbuf2(cv::Size(image_width, image_height), CV_8UC3, cam1.myImgPtr);
+//        cv_image2.image = cv::imdecode(imgbuf2,1);
+//        cv_image2.encoding = "bgr8";
+//        cv_image2.toImageMsg(img1);
 
         // grab the camera info
         sensor_msgs::CameraInfoPtr ci1(new sensor_msgs::CameraInfo(cinfo1->getCameraInfo()));
         ci1->header.frame_id = img1.header.frame_id;
         ci1->header.stamp = img1.header.stamp;
 
-        sensor_msgs::CameraInfoPtr ci2(new sensor_msgs::CameraInfo(cinfo2->getCameraInfo()));
-        ci2->header.frame_id = img2.header.frame_id;
-        ci2->header.stamp = img2.header.stamp;  //make the camera info have the same header stamp
+//        sensor_msgs::CameraInfoPtr ci2(new sensor_msgs::CameraInfo(cinfo2->getCameraInfo()));
+//        ci2->header.frame_id = img2.header.frame_id;
+//        ci2->header.stamp = img2.header.stamp;
 
         // publish image
         img_pub1.publish(img1, *ci1);
+//        img_pub2.publish(img2, *ci2);
 
         ROS_INFO("loop iteration: %d", count++);
     }
+
+    ROS_INFO("will exit ...");
+    return 1;
 }

@@ -1,4 +1,3 @@
-
 #include "sensoray_cam/sensoray_cam.h"
 
 // opencv
@@ -28,7 +27,6 @@ int xioctl(int fd, int request, void *arg)
 
 
 SensorayCam::SensorayCam(std::string d_name){
-    ROS_INFO("SensorayCam constructor called");
 
     io          = IO_METHOD_MMAP;
     fd          = -1;
@@ -39,37 +37,35 @@ SensorayCam::SensorayCam(std::string d_name){
     bSize       = 4; // 4 CIFS(other settings 1 or 2)
 
     std::strcpy(dev_name, d_name.c_str());
+    ROS_INFO("%s: sensoraycam constructor called", dev_name);
+
     open_device();
-    ROS_INFO("open device");
+    ROS_INFO("%s: open device", dev_name);
     init_device();
-    ROS_INFO("init device");
+    ROS_INFO("%s: init device", dev_name);
     start_capturing();
-    ROS_INFO("start capturing");
+    ROS_INFO("%s: start capturing", dev_name);
 }
 
 SensorayCam::~SensorayCam(){
-    ROS_INFO("SensorayCam destructor called");
+    ROS_INFO("%s: sensoraycam destructor called", dev_name);
     stop_capturing();
-    ROS_INFO("stop capturing");
+    ROS_INFO("%s: stop capturing", dev_name);
     uninit_device();
-    ROS_INFO("uninit device");
+    ROS_INFO("%s: uninit device", dev_name);
     close_device();
-    ROS_INFO("close device");
+    ROS_INFO("%s: close device", dev_name);
 }
 
 void SensorayCam::process_image(void *p)
 {
     //    fputc ('.', stdout);
     //    fflush (stdout);
-    // convert buffer to opencv datatupe
-//    cv::Mat buf = cv::Mat(480, 640, CV_8UC3, p);
-    //    cv::Mat image, buf;
-//    image = cv::imdecode(buf, 1);
 }
 
 int SensorayCam::read_frame (void)
 {
-    ROS_INFO("calling read_frame");
+//    ROS_INFO("calling read_frame");
     struct v4l2_buffer buf;
     unsigned int i;
 
@@ -96,7 +92,7 @@ int SensorayCam::read_frame (void)
         CLEAR (buf);
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         buf.memory = V4L2_MEMORY_MMAP;
-        ROS_INFO("entered IO_METHOD_MMAP");
+//        ROS_INFO("entered IO_METHOD_MMAP");
         if (-1 == xioctl (fd, VIDIOC_DQBUF, &buf)) {
             switch (errno) {
             case EAGAIN:
@@ -174,7 +170,7 @@ int SensorayCam::read_frame (void)
 
 bool SensorayCam::grab_image(void)
 {
-    ROS_INFO("grab_image called");
+    ROS_INFO("%s: grab_image called", dev_name);
     fd_set fds;
     struct timeval tv;
     int r;
@@ -188,7 +184,7 @@ bool SensorayCam::grab_image(void)
 
     // wait until the driver has captured data
     r = select (fd + 1, &fds, NULL, NULL, &tv);
-    ROS_INFO("select() returned: r = %d",r);
+//    ROS_INFO("select() returned: r = %d",r);
 
     if (-1 == r) {
         if (EINTR == errno)
@@ -201,9 +197,9 @@ bool SensorayCam::grab_image(void)
         exit (EXIT_FAILURE);
     }
 
-    ROS_INFO("call read_frame");
+//    ROS_INFO("call read_frame");
     if (read_frame ()){
-        ROS_INFO("read_frame called");
+//        ROS_INFO("read_frame called");
         return 1;}
     else{
         ROS_WARN("read_frame failed");
@@ -306,7 +302,7 @@ void SensorayCam::uninit_device (void)
     }
 
     free (buffers);
-    ROS_INFO("Uninitializing device");
+//    ROS_INFO("%s: uninit device", dev_name);
 }
 
 void SensorayCam::init_read(unsigned int buffer_size)
