@@ -76,9 +76,7 @@ private:
 
 };
 
-// warpper function declaration
-//static void errno_exit(const char *s);
-//static int  xioctl(int fd, int request, void *arg);
+// warpper function
 void errno_exit(const char *s)
 {
     fprintf (stderr, "%s error %d, %s\n", s, errno, strerror (errno));

@@ -148,45 +148,6 @@ int SensorayCam::read_frame (void)
     return 1;
 }
 
-//bool SensorayCam::grab_image(void)
-//{
-//    ROS_INFO("%s: grab_image called", dev_name);
-//    fd_set fds;
-//    struct timeval tv;
-//    int r;
-
-//    FD_ZERO (&fds);
-//    FD_SET (fd, &fds);
-
-//    /* Timeout. */
-//    tv.tv_sec = 5;
-//    tv.tv_usec = 0;
-
-//    // wait until the driver has captured data
-//    r = select (fd + 1, &fds, NULL, NULL, &tv);
-////    ROS_INFO("select() returned: r = %d",r);
-
-//    if (-1 == r) {
-//        if (EINTR == errno)
-//            return 0;
-//        errno_exit ("select");
-//    }
-
-//    if (0 == r) {
-//        fprintf (stderr, "select timeout\n");
-//        exit (EXIT_FAILURE);
-//    }
-
-////    ROS_INFO("call read_frame");
-//    if (read_frame ()){
-////        ROS_INFO("read_frame called");
-//        return 1;}
-//    else{
-//        ROS_WARN("read_frame failed");
-//    }
-//    /* EAGAIN - continue select loop. */
-//}
-
 void SensorayCam::stop_capturing(void)
 {
     enum v4l2_buf_type type;

@@ -80,13 +80,11 @@ int main(int argc, char **argv)
     }
 
     // define sensoray camera capture object
-    /*for debug, we only define one object for now*/
     SensorayCam cam1(dev_name1);
     ROS_INFO("cam 1 opened");
     SensorayCam cam2(dev_name2);
     ROS_INFO("cam 2 opened");
 
-//    sleep(1);
 
     int c = 0;
     ROS_INFO("start while loop");
@@ -113,41 +111,6 @@ int main(int argc, char **argv)
     }
 
     return 1;
-
-//    // the main loop
-//    int count = 0;
-//    while(ros::ok() && nh.ok() && stopFlag == 0)// && count < 10)
-//    {
-//        ROS_INFO("ros is ok.");
-//        // read image
-//        if(!grab_image(&cam1, &cam2)){
-//            ROS_WARN("%s: loses frame.", cam1.dev_name);
-//            stopFlag = 1;
-//            continue;
-//        }
-//        ROS_INFO("grabed a image");
-
-//        //convert image
-//        convert_image( &cam1, &cam2, image_width, image_height, img1, img2);
-
-//        // grab the camera info
-//        sensor_msgs::CameraInfoPtr ci1(new sensor_msgs::CameraInfo(cinfo1->getCameraInfo()));
-//        ci1->header.frame_id = img1.header.frame_id;
-//        ci1->header.stamp = img1.header.stamp;
-
-////        sensor_msgs::CameraInfoPtr ci2(new sensor_msgs::CameraInfo(cinfo2->getCameraInfo()));
-////        ci2->header.frame_id = img2.header.frame_id;
-////        ci2->header.stamp = img2.header.stamp;
-
-//        // publish image
-//        img_pub1.publish(img1, *ci1);
-////        img_pub2.publish(img2, *ci2);
-
-//        ROS_INFO("loop iteration: %d", count++);
-//    }
-
-//    ROS_INFO("will exit ...");
-//    return 1;
 }
 
 void handler( int )
@@ -211,6 +174,7 @@ bool convert_image(SensorayCam *cam1, SensorayCam *cam2,
                    int image_width, int image_height,
                    sensor_msgs::Image &img1,sensor_msgs::Image &img2)
 {
+    // check if the image pointer is null
     if(cam1->myImgPtr == NULL || cam2->myImgPtr == NULL){
         if(cam1->myImgPtr == NULL){
             ROS_WARN("lose a frame on cam 1 ");
