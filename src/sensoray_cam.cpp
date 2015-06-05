@@ -7,25 +7,6 @@
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
-void errno_exit(const char *s)
-{
-    fprintf (stderr, "%s error %d, %s\n", s, errno, strerror (errno));
-    exit(EXIT_FAILURE);
-}
-
-int xioctl(int fd, int request, void *arg)
-{
-    int r;
-    int count = 0;
-    do {
-        r = ioctl (fd, request, arg);
-        //        ROS_INFO("xioctl called count = %d",count++);
-    }
-    while (-1 == r && EINTR == errno);
-    return r;
-}
-
-
 SensorayCam::SensorayCam(std::string d_name){
 
     io          = IO_METHOD_MMAP;
@@ -65,7 +46,6 @@ void SensorayCam::process_image(void *p)
 
 int SensorayCam::read_frame (void)
 {
-//    ROS_INFO("calling read_frame");
     struct v4l2_buffer buf;
     unsigned int i;
 
@@ -168,44 +148,44 @@ int SensorayCam::read_frame (void)
     return 1;
 }
 
-bool SensorayCam::grab_image(void)
-{
-    ROS_INFO("%s: grab_image called", dev_name);
-    fd_set fds;
-    struct timeval tv;
-    int r;
+//bool SensorayCam::grab_image(void)
+//{
+//    ROS_INFO("%s: grab_image called", dev_name);
+//    fd_set fds;
+//    struct timeval tv;
+//    int r;
 
-    FD_ZERO (&fds);
-    FD_SET (fd, &fds);
+//    FD_ZERO (&fds);
+//    FD_SET (fd, &fds);
 
-    /* Timeout. */
-    tv.tv_sec = 5;
-    tv.tv_usec = 0;
+//    /* Timeout. */
+//    tv.tv_sec = 5;
+//    tv.tv_usec = 0;
 
-    // wait until the driver has captured data
-    r = select (fd + 1, &fds, NULL, NULL, &tv);
-//    ROS_INFO("select() returned: r = %d",r);
+//    // wait until the driver has captured data
+//    r = select (fd + 1, &fds, NULL, NULL, &tv);
+////    ROS_INFO("select() returned: r = %d",r);
 
-    if (-1 == r) {
-        if (EINTR == errno)
-            return 0;
-        errno_exit ("select");
-    }
+//    if (-1 == r) {
+//        if (EINTR == errno)
+//            return 0;
+//        errno_exit ("select");
+//    }
 
-    if (0 == r) {
-        fprintf (stderr, "select timeout\n");
-        exit (EXIT_FAILURE);
-    }
+//    if (0 == r) {
+//        fprintf (stderr, "select timeout\n");
+//        exit (EXIT_FAILURE);
+//    }
 
-//    ROS_INFO("call read_frame");
-    if (read_frame ()){
-//        ROS_INFO("read_frame called");
-        return 1;}
-    else{
-        ROS_WARN("read_frame failed");
-    }
-    /* EAGAIN - continue select loop. */
-}
+////    ROS_INFO("call read_frame");
+//    if (read_frame ()){
+////        ROS_INFO("read_frame called");
+//        return 1;}
+//    else{
+//        ROS_WARN("read_frame failed");
+//    }
+//    /* EAGAIN - continue select loop. */
+//}
 
 void SensorayCam::stop_capturing(void)
 {
@@ -240,6 +220,8 @@ void SensorayCam::start_capturing(void)
 
     case IO_METHOD_MMAP:
         for (i = 0; i < n_buffers; ++i) {
+            ROS_INFO("%s: filling buffer %d", dev_name, i);
+
             struct v4l2_buffer buf;
             CLEAR (buf);
             buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -254,7 +236,7 @@ void SensorayCam::start_capturing(void)
 
         if (-1 == xioctl (fd, VIDIOC_STREAMON, &type))
             errno_exit ("VIDIOC_STREAMON");
-
+        ROS_INFO("%s: stream on fd = %d", dev_name, fd);
         break;
 
     case IO_METHOD_USERPTR:
@@ -491,7 +473,7 @@ void SensorayCam::init_device(void)
     /* verify JPEG quality was set */
     if (-1 == xioctl (fd, VIDIOC_S_JPEGCOMP, &jc))
         errno_exit ("VIDIOC_S_JPEGCOMP");
-    printf("set JPEG compression quality to %d\n", jc.quality);
+//    printf("set JPEG compression quality to %d\n", jc.quality);
 
     CLEAR (fmt);
     fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -575,7 +557,7 @@ void SensorayCam::close_device(void)
         errno_exit ("close");
 
     fd = -1;
-    ROS_INFO("Closing video devices.");
+//    ROS_INFO("Closing video devices.");
 }
 
 void SensorayCam::open_device(void)
@@ -594,7 +576,7 @@ void SensorayCam::open_device(void)
     }
 
     fd = open (dev_name, O_RDWR /* required */ | O_NONBLOCK, 0);
-    ROS_INFO("open_device: fd = %d, dev_name = %s",fd, dev_name);
+    ROS_INFO("%s: open_device: fd = %d", dev_name, fd);
     if (-1 == fd) {
         fprintf (stderr, "Cannot open '%s': %d, %s\n",
                  dev_name, errno, strerror (errno));
