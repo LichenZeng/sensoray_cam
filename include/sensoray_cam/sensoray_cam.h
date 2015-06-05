@@ -62,7 +62,6 @@ public:
     // member functions
     int  read_frame(void);
     void process_image(void *p);
-//    bool grab_image(void);
     void stop_capturing (void);
     void start_capturing (void);
     void uninit_device (void);

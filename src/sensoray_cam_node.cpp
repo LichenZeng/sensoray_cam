@@ -86,9 +86,29 @@ int main(int argc, char **argv)
     SensorayCam cam2(dev_name2);
     ROS_INFO("cam 2 opened");
 
+//    sleep(1);
+
     int c = 0;
-    while(stopFlag == 0){
+    ROS_INFO("start while loop");
+    while(c < 50){
         grab_image(&cam1, &cam2);
+        ROS_INFO("grabed image");
+        if(!convert_image( &cam1, &cam2, image_width, image_height, img1, img2))
+            continue;
+
+        // grab the camera info
+        sensor_msgs::CameraInfoPtr ci1(new sensor_msgs::CameraInfo(cinfo1->getCameraInfo()));
+        ci1->header.frame_id = img1.header.frame_id;
+        ci1->header.stamp = img1.header.stamp;
+
+        sensor_msgs::CameraInfoPtr ci2(new sensor_msgs::CameraInfo(cinfo2->getCameraInfo()));
+        ci2->header.frame_id = img2.header.frame_id;
+        ci2->header.stamp = img2.header.stamp;
+
+        // publish image
+        img_pub1.publish(img1, *ci1);
+        img_pub2.publish(img2, *ci2);
+
         ROS_INFO("%d",c++);
     }
 
@@ -138,8 +158,7 @@ void handler( int )
 bool grab_image(SensorayCam *cam1, SensorayCam *cam2)
 {
     int c1 = 0, c2 = 0;
-    for(int count = 0; count < 5; count++){
-//        ROS_INFO("grab image for loop count %d",count);
+    for(int count = 0; count < 10; count++){
         fd_set fds, ofds;
         struct timeval tv;
         int r;
@@ -155,7 +174,6 @@ bool grab_image(SensorayCam *cam1, SensorayCam *cam2)
 
         // wait until the driver has captured data
         r = select (std::max(cam1->fd, cam2->fd) + 1, &fds, &ofds, NULL, &tv);
-//        ROS_INFO("grab image: select range %d, r %d",std::max(cam1->fd, cam2->fd) + 1, r);
         if (-1 == r) {
             if (EINTR == errno)
                 continue;
@@ -167,18 +185,23 @@ bool grab_image(SensorayCam *cam1, SensorayCam *cam2)
             exit (EXIT_FAILURE);
         }
 
-        if (c1 == 0 && FD_ISSET(cam1->fd, &fds)) {
-            ROS_INFO("cam 1 call read_frame");
-            if (cam1->read_frame ())
-                c1 = 1;
+        if (c1 == 0){
+            if (FD_ISSET(cam1->fd, &fds)) {
+                ROS_INFO("cam 1 call read_frame");
+                if (cam1->read_frame ())
+                    c1 = 1;
+            }
         }
-        if (c2 == 0 && FD_ISSET(cam2->fd, &fds)) {
-            ROS_INFO("cam 2 call read_frame");
-            if (cam2->read_frame ())
-                c2 = 1;
+        if (c2 == 0){
+            if (FD_ISSET(cam2->fd, &fds)) {
+                ROS_INFO("cam 2 call read_frame");
+                if (cam2->read_frame ())
+                    c2 = 1;
+            }
         }
 
         if (c1 == 1 && c2 == 1){
+            ROS_INFO("c1 = %d, c2 = %d, i = %d",c1, c2, count);
             break;
         }
     }
@@ -188,6 +211,16 @@ bool convert_image(SensorayCam *cam1, SensorayCam *cam2,
                    int image_width, int image_height,
                    sensor_msgs::Image &img1,sensor_msgs::Image &img2)
 {
+    if(cam1->myImgPtr == NULL || cam2->myImgPtr == NULL){
+        if(cam1->myImgPtr == NULL){
+            ROS_WARN("lose a frame on cam 1 ");
+        }
+        if(cam2->myImgPtr == NULL){
+            ROS_WARN("lose a frame on cam 2 ");
+        }
+        return 0;
+    }
+
     cv_bridge::CvImage cv_image1;
     cv::Mat imgbuf1(cv::Size(image_width, image_height), CV_8UC3, cam1->myImgPtr);
     cv_image1.image = cv::imdecode(imgbuf1,1);
@@ -198,5 +231,7 @@ bool convert_image(SensorayCam *cam1, SensorayCam *cam2,
     cv::Mat imgbuf2(cv::Size(image_width, image_height), CV_8UC3, cam2->myImgPtr);
     cv_image2.image = cv::imdecode(imgbuf2,1);
     cv_image2.encoding = "bgr8";
-    cv_image2.toImageMsg(img1);
+    cv_image2.toImageMsg(img2);
+
+    return 1;
 }
