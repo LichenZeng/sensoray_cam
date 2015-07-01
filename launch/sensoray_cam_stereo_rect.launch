@@ -1,0 +1,15 @@
+<!-- launch file to start sensoray capture device-->
+<launch>
+    <param name="use_sim_time"  value="true"/>
+    <node name="sensoray_cam_stereo" pkg="sensoray_cam" type="sensoray_cam_node" output="screen">
+		<!-- b_size=2 : 320*240 
+			 b_size=4 : 640*480 -->		
+		<param name="b_size"  value="2"/> 
+        <param name="video_device1"   value="/dev/video1"/>
+        <param name="video_device2"   value="/dev/video2"/>
+        <param name="camera_info_url1" value="file://$(find sensoray_cam)/param/calib/left_s.yaml"/>
+        <param name="camera_info_url2" value="file://$(find sensoray_cam)/param/calib/right_s.yaml"/>
+    </node>
+
+	<node name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc" output="screen" ns="sensoray_cam_stereo"/>
+</launch>

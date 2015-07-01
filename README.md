@@ -1,7 +1,13 @@
-# sensory2255_ros_driver
+# sensory_cam
 This program provides a ros interface to capture images via sensoray video capture card model 2255. 
 
-For one channel recording, see *master;
-For two channel recording, see *multi_channel.
-
-For more information, please contact zhenwk@gmail.com
+## Install sensoray capture card driver on Linux. 
+```
+#!bash
+        cd your_checkout_folder/sensoray_cam/drivers/v4l/
+        chmod 755 Makefile
+        make
+        sudo make modules_install
+        sudo modprobe s2255drv
+```
+You may need to reboot to load driver

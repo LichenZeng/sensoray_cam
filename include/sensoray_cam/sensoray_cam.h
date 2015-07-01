@@ -27,10 +27,6 @@
 // ros
 #include <ros/ros.h>
 
-// warpper function declaration
-static void errno_exit(const char *s);
-static int  xioctl(int fd, int request, void *arg);
-
 // define class SensorayCam
 class SensorayCam
 {
@@ -48,7 +44,7 @@ public:
         size_t length;
     };
 
-    SensorayCam(std::string device_name);
+    SensorayCam(std::string device_name, int b_size);
     ~SensorayCam();
 
     // member variables
@@ -62,11 +58,11 @@ public:
     int             bSize; // 4 CIFS(other settings 1 or 2)
     void*           myImgPtr;
     size_t          myImgSize;
+    ros::Time       stamp;
 
     // member functions
     int  read_frame(void);
     void process_image(void *p);
-    bool grab_image(void);
     void stop_capturing (void);
     void start_capturing (void);
     void uninit_device (void);
@@ -80,5 +76,24 @@ private:
     void init_userp	(unsigned int buffer_size);
 
 };
+
+// warpper function
+void errno_exit(const char *s)
+{
+    fprintf (stderr, "%s error %d, %s\n", s, errno, strerror (errno));
+    exit(EXIT_FAILURE);
+}
+
+int xioctl(int fd, int request, void *arg)
+{
+    int r;
+    int count = 0;
+    do {
+        r = ioctl (fd, request, arg);
+        //        ROS_INFO("xioctl called count = %d",count++);
+    }
+    while (-1 == r && EINTR == errno);
+    return r;
+}
 
 #endif

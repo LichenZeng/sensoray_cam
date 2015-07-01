@@ -7,9 +7,6 @@
 
   <license>BSD</license>
 
-  <!-- <url type="website">http://wiki.ros.org/sensoray_cam</url> -->
-
-
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>camera_info_manager</build_depend>
@@ -27,4 +24,5 @@
   <run_depend>std_msgs</run_depend>
   <run_depend>cv_bridge</run_depend>
   <run_depend>opencv2</run_depend>
+
 </package>
